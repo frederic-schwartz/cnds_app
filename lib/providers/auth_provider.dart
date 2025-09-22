@@ -10,12 +10,14 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   bool _isLoggedIn = false;
   String? _userNickname;
+  String? _userEmail;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _isLoggedIn;
   bool get hasValidProfile => _userNickname != null && _userNickname!.isNotEmpty;
   String? get userNickname => _userNickname;
+  String? get userEmail => _userEmail;
 
   void _setLoading(bool loading) {
     _isLoading = loading;
@@ -35,6 +37,7 @@ class AuthProvider extends ChangeNotifier {
       // 1. Connexion
       await _directusService.login(email, password);
       _isLoggedIn = true;
+      _userEmail = email;
 
       // 2. Vérifier le profil
       await _checkProfile();
@@ -101,6 +104,7 @@ class AuthProvider extends ChangeNotifier {
     await _directusService.logout();
     _isLoggedIn = false;
     _userNickname = null;
+    _userEmail = null;
     notifyListeners();
   }
 
