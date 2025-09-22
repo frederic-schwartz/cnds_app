@@ -49,8 +49,13 @@ class DirectusService {
       }),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+      if (response.body.isNotEmpty) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': true};
+      }
     } else {
       throw Exception('Erreur lors de l\'inscription: ${response.body}');
     }
@@ -67,8 +72,6 @@ class DirectusService {
         }),
       );
 
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -78,7 +81,6 @@ class DirectusService {
         throw Exception('Erreur lors de la connexion: ${response.body}');
       }
     } catch (e) {
-      print('Login error: $e');
       rethrow;
     }
   }
@@ -124,8 +126,6 @@ class DirectusService {
         headers: _headers,
       );
 
-      print('getCurrentUser response status: ${response.statusCode}');
-      print('getCurrentUser response body: ${response.body}');
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -136,7 +136,6 @@ class DirectusService {
         throw Exception('Erreur lors de la récupération de l\'utilisateur: ${response.body}');
       }
     } catch (e) {
-      print('getCurrentUser error: $e');
       rethrow;
     }
   }
@@ -152,7 +151,6 @@ class DirectusService {
         headers: _headers,
       );
 
-      print('getUserProfile NEW response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -164,7 +162,6 @@ class DirectusService {
         throw Exception('Status: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('getUserProfile error: $e');
       rethrow;
     }
   }
@@ -173,7 +170,6 @@ class DirectusService {
     try {
       final user = await getCurrentUser();
       final userId = user['data']['id'];
-      print('Creating profile for userId: $userId');
 
       final profileData = await getUserProfile();
       final profiles = profileData['data'] as List;
@@ -181,21 +177,19 @@ class DirectusService {
       if (profiles.isNotEmpty) {
         final profile = profiles.first;
         final profileUserId = profile['user_id'];
-        print('Updating existing profile for user: $profileUserId');
         final response = await http.patch(
           Uri.parse('$_baseUrl/items/profiles/$profileUserId'),
           headers: _headers,
           body: jsonEncode({'nickname': nickname}),
         );
 
-        print('Update profile response: ${response.statusCode} - ${response.body}');
+        print('DEBUG Profile Update - Status: ${response.statusCode}, Response: ${response.body}');
         if (response.statusCode == 200) {
           return jsonDecode(response.body);
         } else {
           throw Exception('Erreur mise à jour profil');
         }
       } else {
-        print('Creating new profile with nickname: "$nickname"');
         final response = await http.post(
           Uri.parse('$_baseUrl/items/profiles'),
           headers: _headers,
@@ -205,7 +199,7 @@ class DirectusService {
           }),
         );
 
-        print('Create profile response: ${response.statusCode} - ${response.body}');
+        print('DEBUG Profile Creation - Status: ${response.statusCode}, Response: ${response.body}');
         if (response.statusCode == 200 || response.statusCode == 201) {
           return jsonDecode(response.body);
         } else if (response.statusCode == 204) {
@@ -215,12 +209,30 @@ class DirectusService {
           return await getUserProfile();
         } else if (response.statusCode == 403) {
           throw Exception('Pas d\'autorisation pour créer un profil');
+        } else if (response.statusCode == 400) {
+          // Analyser l'erreur 400 pour détecter le cas du nickname non unique
+          try {
+            final errorData = jsonDecode(response.body);
+            final errors = errorData['errors'] as List?;
+            if (errors != null && errors.isNotEmpty) {
+              final error = errors.first;
+              final code = error['extensions']?['code'];
+              if (code == 'RECORD_NOT_UNIQUE' && error['extensions']?['field'] == 'nickname') {
+                throw Exception('Ce nickname est déjà utilisé. Choisis-en un autre !');
+              }
+            }
+          } catch (e) {
+            if (e.toString().contains('Ce nickname est déjà utilisé')) {
+              rethrow;
+            }
+          }
+          throw Exception('Erreur lors de la création du profil');
         } else {
           throw Exception('Erreur création profil');
         }
       }
     } catch (e) {
-      print('createOrUpdateProfile error: $e');
+      print('DEBUG Profile Error: $e');
       rethrow;
     }
   }

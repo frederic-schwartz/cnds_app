@@ -84,6 +84,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 // Champ nom d'utilisateur
                 TextFormField(
                   controller: _nicknameController,
+                  autocorrect: false,
+                  enableSuggestions: false,
                   decoration: InputDecoration(
                     labelText: 'Nom d\'utilisateur',
                     prefixIcon: const Icon(Icons.person_outline),

@@ -90,7 +90,7 @@ class AuthProvider extends ChangeNotifier {
       _userNickname = nickname;
       return true;
     } catch (e) {
-      _setError('Erreur création profil');
+      _setError(e.toString().replaceFirst('Exception: ', ''));
       return false;
     } finally {
       _setLoading(false);
