@@ -41,7 +41,7 @@ class DirectusService {
 
   Future<Map<String, dynamic>> register(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/users'),
+      Uri.parse('$_baseUrl/users/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,

@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../services/directus_service.dart';
 
-class SimpleAuthProvider extends ChangeNotifier {
+class AuthProvider extends ChangeNotifier {
   final DirectusService _directusService;
 
-  SimpleAuthProvider(this._directusService);
+  AuthProvider(this._directusService);
 
   bool _isLoading = false;
   String? _error;
@@ -43,6 +43,21 @@ class SimpleAuthProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Connexion échouée');
       _isLoggedIn = false;
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> register(String email, String password) async {
+    _setLoading(true);
+    _setError(null);
+
+    try {
+      await _directusService.register(email, password);
+      return true;
+    } catch (e) {
+      _setError('Inscription échouée');
       return false;
     } finally {
       _setLoading(false);

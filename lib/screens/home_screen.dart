@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/simple_auth_provider.dart';
-import 'simple_login_screen.dart';
+import '../providers/auth_provider.dart';
+import 'login_screen.dart';
 
-class SimpleHomeScreen extends StatelessWidget {
-  const SimpleHomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,11 +15,11 @@ class SimpleHomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              final authProvider = Provider.of<SimpleAuthProvider>(context, listen: false);
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
               await authProvider.logout();
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const SimpleLoginScreen()),
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
                 );
               }
@@ -27,7 +27,7 @@ class SimpleHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<SimpleAuthProvider>(
+      body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           return Center(
             child: Column(
