@@ -29,6 +29,10 @@ class DirectusService {
     _refreshToken = null;
   }
 
+  Future<void> clearSession() async {
+    await _clearTokens();
+  }
+
   Map<String, String> get _headers {
     Map<String, String> headers = {
       'Content-Type': 'application/json',
@@ -114,11 +118,12 @@ class DirectusService {
       await _saveTokens(data['data']['access_token'], data['data']['refresh_token']);
       return data;
     } else {
+      await _clearTokens();
       throw Exception('Erreur lors du rafraîchissement du token: ${response.body}');
     }
   }
 
-  Future<Map<String, dynamic>> getCurrentUser() async {
+  Future<Map<String, dynamic>> getCurrentUser({bool retry = false}) async {
     try {
       await _loadTokens();
       final response = await http.get(
@@ -129,10 +134,13 @@ class DirectusService {
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
+      } else if (response.statusCode == 401 && !retry) {
         await refreshTokens();
-        return getCurrentUser();
+        return getCurrentUser(retry: true);
       } else {
+        if (response.statusCode == 401) {
+          await _clearTokens();
+        }
         throw Exception('Erreur lors de la récupération de l\'utilisateur: ${response.body}');
       }
     } catch (e) {
@@ -140,7 +148,7 @@ class DirectusService {
     }
   }
 
-  Future<Map<String, dynamic>> getUserProfile() async {
+  Future<Map<String, dynamic>> getUserProfile({bool retry = false}) async {
     try {
       final user = await getCurrentUser();
       final userId = user['data']['id'];
@@ -155,9 +163,9 @@ class DirectusService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data;
-      } else if (response.statusCode == 401) {
+      } else if (response.statusCode == 401 && !retry) {
         await refreshTokens();
-        return getUserProfile();
+        return getUserProfile(retry: true);
       } else {
         throw Exception('Status: ${response.statusCode} - ${response.body}');
       }
@@ -166,7 +174,7 @@ class DirectusService {
     }
   }
 
-  Future<Map<String, dynamic>> createOrUpdateProfile(String nickname) async {
+  Future<Map<String, dynamic>> createOrUpdateProfile(String nickname, {bool retry = false}) async {
     try {
       final user = await getCurrentUser();
       final userId = user['data']['id'];
@@ -184,6 +192,9 @@ class DirectusService {
         );
         if (response.statusCode == 200) {
           return jsonDecode(response.body);
+        } else if (response.statusCode == 401 && !retry) {
+          await refreshTokens();
+          return createOrUpdateProfile(nickname, retry: true);
         } else {
           throw Exception('Erreur mise à jour profil');
         }
@@ -204,6 +215,9 @@ class DirectusService {
           // Récupérons le profil créé
           await Future.delayed(const Duration(milliseconds: 100)); // Petit délai
           return await getUserProfile();
+        } else if (response.statusCode == 401 && !retry) {
+          await refreshTokens();
+          return createOrUpdateProfile(nickname, retry: true);
         } else if (response.statusCode == 403) {
           throw Exception('Pas d\'autorisation pour créer un profil');
         } else if (response.statusCode == 400) {
@@ -233,7 +247,8 @@ class DirectusService {
     }
   }
 
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount({bool retry = false}) async {
+    await _loadTokens();
     final user = await getCurrentUser();
     final userId = user['data']['id'];
 
@@ -244,12 +259,15 @@ class DirectusService {
 
     if (response.statusCode == 200 || response.statusCode == 204) {
       await _clearTokens();
+    } else if (response.statusCode == 401 && !retry) {
+      await refreshTokens();
+      await deleteAccount(retry: true);
     } else {
       throw Exception('Erreur lors de la suppression du compte: ${response.body}');
     }
   }
 
-  Future<Map<String, dynamic>> getProducts() async {
+  Future<Map<String, dynamic>> getProducts({bool retry = false}) async {
     await _loadTokens();
     final response = await http.get(
       Uri.parse('$_baseUrl/items/products'),
@@ -258,15 +276,15 @@ class DirectusService {
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
-    } else if (response.statusCode == 401) {
+    } else if (response.statusCode == 401 && !retry) {
       await refreshTokens();
-      return getProducts();
+      return getProducts(retry: true);
     } else {
       throw Exception('Erreur lors de la récupération des produits: ${response.body}');
     }
   }
 
-  Future<Map<String, dynamic>> makeReservation(String productId) async {
+  Future<Map<String, dynamic>> makeReservation(String productId, {bool retry = false}) async {
     final user = await getCurrentUser();
     final userId = user['data']['id'];
 
@@ -282,9 +300,9 @@ class DirectusService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
-    } else if (response.statusCode == 401) {
+    } else if (response.statusCode == 401 && !retry) {
       await refreshTokens();
-      return makeReservation(productId);
+      return makeReservation(productId, retry: true);
     } else {
       throw Exception('Erreur lors de la réservation: ${response.body}');
     }
@@ -292,6 +310,6 @@ class DirectusService {
 
   Future<bool> isLoggedIn() async {
     await _loadTokens();
-    return _accessToken != null;
+    return _accessToken != null && _refreshToken != null;
   }
 }

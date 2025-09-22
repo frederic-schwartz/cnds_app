@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/auth_provider.dart';
+import 'about_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -98,7 +100,11 @@ class HomeScreen extends StatelessWidget {
                         title: const Text('À propos'),
                         onTap: () {
                           Navigator.pop(context);
-                          // TODO: Navigation vers à propos
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AboutScreen(),
+                            ),
+                          );
                         },
                       ),
                     ],

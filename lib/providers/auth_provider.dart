@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../services/directus_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -11,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoggedIn = false;
   String? _userNickname;
   String? _userEmail;
+  bool _isCheckingSession = false;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -18,6 +20,7 @@ class AuthProvider extends ChangeNotifier {
   bool get hasValidProfile => _userNickname != null && _userNickname!.isNotEmpty;
   String? get userNickname => _userNickname;
   String? get userEmail => _userEmail;
+  bool get isCheckingSession => _isCheckingSession;
 
   void _setLoading(bool loading) {
     _isLoading = loading;
@@ -46,6 +49,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Connexion échouée');
       _isLoggedIn = false;
+      await _directusService.clearSession();
       return false;
     } finally {
       _setLoading(false);
@@ -108,17 +112,36 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> checkAuthStatus() async {
-    _setLoading(true);
+    _isCheckingSession = true;
+    notifyListeners();
     try {
-      _isLoggedIn = await _directusService.isLoggedIn();
-      if (_isLoggedIn) {
+      final hasValidTokens = await _directusService.isLoggedIn();
+
+      if (!hasValidTokens) {
+        _isLoggedIn = false;
+        _userNickname = null;
+        _userEmail = null;
+        return;
+      }
+
+      try {
+        final user = await _directusService.getCurrentUser();
+        _userEmail = user['data']['email'] as String?;
+        _isLoggedIn = true;
         await _checkProfile();
+      } catch (_) {
+        await _directusService.clearSession();
+        _isLoggedIn = false;
+        _userNickname = null;
+        _userEmail = null;
       }
     } catch (e) {
       _isLoggedIn = false;
       _userNickname = null;
+      _userEmail = null;
     } finally {
-      _setLoading(false);
+      _isCheckingSession = false;
+      notifyListeners();
     }
   }
 }
