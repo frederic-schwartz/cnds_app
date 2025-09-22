@@ -182,8 +182,6 @@ class DirectusService {
           headers: _headers,
           body: jsonEncode({'nickname': nickname}),
         );
-
-        print('DEBUG Profile Update - Status: ${response.statusCode}, Response: ${response.body}');
         if (response.statusCode == 200) {
           return jsonDecode(response.body);
         } else {
@@ -199,7 +197,6 @@ class DirectusService {
           }),
         );
 
-        print('DEBUG Profile Creation - Status: ${response.statusCode}, Response: ${response.body}');
         if (response.statusCode == 200 || response.statusCode == 201) {
           return jsonDecode(response.body);
         } else if (response.statusCode == 204) {
@@ -232,7 +229,6 @@ class DirectusService {
         }
       }
     } catch (e) {
-      print('DEBUG Profile Error: $e');
       rethrow;
     }
   }

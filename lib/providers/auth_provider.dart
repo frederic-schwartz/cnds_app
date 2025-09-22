@@ -79,7 +79,6 @@ class AuthProvider extends ChangeNotifier {
         _userNickname = null;
       }
     } catch (e) {
-      print('Erreur vérification profil: $e');
       _userNickname = null;
     }
   }
