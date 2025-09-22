@@ -19,6 +19,7 @@ class MyApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
+        Provider<DirectusService>.value(value: directusService),
         ChangeNotifierProvider(create: (_) => AuthProvider(directusService)),
         ChangeNotifierProvider(
           create: (_) => ArticlesProvider(directusService),

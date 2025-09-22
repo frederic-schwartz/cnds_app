@@ -333,10 +333,44 @@ class DirectusService {
     return _accessToken != null && _refreshToken != null;
   }
 
+  String buildAssetUrl(
+    String fileId, {
+    int? width,
+    int? height,
+    int? quality,
+    String? fit,
+  }) {
+    if (fileId.isEmpty) {
+      return '';
+    }
+
+    final baseUri = Uri.parse('$_baseUrl/assets/$fileId');
+    final params = <String, String>{};
+    if (width != null) params['width'] = '$width';
+    if (height != null) params['height'] = '$height';
+    if (quality != null) params['quality'] = '$quality';
+    if (fit != null && fit.isNotEmpty) params['fit'] = fit;
+
+    if (params.isEmpty) {
+      return baseUri.toString();
+    }
+
+    return baseUri.replace(queryParameters: params).toString();
+  }
+
+  Map<String, String> get assetAuthHeaders {
+    if (_accessToken == null || _accessToken!.isEmpty) {
+      return const {};
+    }
+    return {'Authorization': 'Bearer $_accessToken'};
+  }
+
   Future<List<Article>> getArticles({bool retry = false}) async {
     await _loadTokens();
     final response = await http.get(
-      Uri.parse('$_baseUrl/items/articles?fields=*,articles_files.*'),
+      Uri.parse(
+        '$_baseUrl/items/articles?fields=*,articles_files.directus_files_id.*,photos.directus_files_id.*',
+      ),
       headers: _headers,
     );
 

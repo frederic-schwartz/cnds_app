@@ -6,6 +6,7 @@ import '../providers/about_provider.dart';
 import '../providers/articles_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/app_info_service.dart';
+import '../services/directus_service.dart';
 import 'about_screen.dart';
 import 'login_screen.dart';
 
@@ -238,7 +239,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           if (articlesProvider.isLoading) const LinearProgressIndicator(),
           if (articlesProvider.articles.isEmpty) _buildEmptyArticlesState(),
-          ...articlesProvider.articles.map(_buildArticleCard),
+          ...articlesProvider.articles.map(
+            (article) => _buildArticleCard(context, article),
+          ),
           const SizedBox(height: 16),
         ],
       ),
@@ -323,9 +326,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildArticleCard(Article article) {
+  Widget _buildArticleCard(BuildContext context, Article article) {
     final hasDiscount =
         article.newSellingPrice != null && article.newSellingPrice! > 0;
+    final directusService = context.read<DirectusService>();
+    final imageUrls = article.assetFileIds
+        .map(
+          (id) => directusService.buildAssetUrl(
+            id,
+            width: 800,
+            height: 600,
+            fit: 'cover',
+            quality: 80,
+          ),
+        )
+        .where((url) => url.isNotEmpty)
+        .toList();
+    final assetHeaders = directusService.assetAuthHeaders;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -336,6 +353,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildArticleImages(imageUrls, assetHeaders),
+            if (imageUrls.isNotEmpty) const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -423,5 +442,75 @@ class _HomeScreenState extends State<HomeScreen> {
       return '${price.toStringAsFixed(0)} €';
     }
     return '${price.toStringAsFixed(2)} €';
+  }
+
+  Widget _buildArticleImages(
+    List<String> imageUrls,
+    Map<String, String> headers,
+  ) {
+    if (imageUrls.isEmpty) {
+      return Container(
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey[200],
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            color: Colors.grey,
+            size: 40,
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 180,
+      child: PageView.builder(
+        controller: PageController(
+          viewportFraction: imageUrls.length > 1 ? 0.92 : 1,
+        ),
+        itemCount: imageUrls.length,
+        itemBuilder: (context, index) {
+          final imageUrl = imageUrls[index];
+          final rightPadding = index == imageUrls.length - 1 ? 0.0 : 12.0;
+
+          return Padding(
+            padding: EdgeInsets.only(right: rightPadding),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                headers: headers.isEmpty ? null : headers,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) {
+                    return child;
+                  }
+                  return Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }

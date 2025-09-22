@@ -11,8 +11,18 @@ class Article {
   final int? stock;
   final double? newSellingPrice;
   final String? description;
-  final List<int> photos;
+  final List<String> photos;
   final List<ArticleFileLink> files;
+
+  List<String> get assetFileIds {
+    final relationIds = files
+        .map((file) => file.fileId)
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final legacyPhotoIds = photos.map((id) => id.toString()).toList();
+    final uniqueIds = <String>{...relationIds, ...legacyPhotoIds};
+    return uniqueIds.toList();
+  }
 
   const Article({
     required this.id,
@@ -47,12 +57,7 @@ class Article {
       stock: _parseInt(json['stock']),
       newSellingPrice: _toDouble(json['new_selling_price']),
       description: json['description'] as String?,
-      photos:
-          (json['photos'] as List?)
-              ?.map((e) => _parseInt(e))
-              .whereType<int>()
-              .toList() ??
-          const [],
+      photos: _parsePhotoIds(json['photos']),
       files:
           (json['articles_files'] as List?)
               ?.map((e) => ArticleFileLink.fromJson(e as Map<String, dynamic>))
@@ -93,7 +98,7 @@ class Article {
     int? stock,
     double? newSellingPrice,
     String? description,
-    List<int>? photos,
+    List<String>? photos,
     List<ArticleFileLink>? files,
   }) {
     return Article(
@@ -132,6 +137,38 @@ class Article {
     final str = value.toString().toLowerCase();
     return str == 'true' || str == '1';
   }
+
+  static List<String> _parsePhotoIds(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    final results = <String>[];
+    for (final item in value) {
+      if (item is Map<String, dynamic>) {
+        final ref = item['directus_files_id'];
+        if (ref is Map<String, dynamic>) {
+          final id = ref['id'] ?? ref['file'];
+          if (id != null && id.toString().isNotEmpty) {
+            results.add(id.toString());
+            continue;
+          }
+        }
+        if (ref != null && ref.toString().isNotEmpty) {
+          results.add(ref.toString());
+          continue;
+        }
+        final fallback = item['id'] ?? item['file'];
+        if (fallback != null && fallback.toString().isNotEmpty) {
+          results.add(fallback.toString());
+        }
+      } else if (item != null && item.toString().isNotEmpty) {
+        results.add(item.toString());
+      }
+    }
+
+    return results;
+  }
 }
 
 class ArticleFileLink {
@@ -146,12 +183,17 @@ class ArticleFileLink {
   });
 
   factory ArticleFileLink.fromJson(Map<String, dynamic> json) {
+    final rawFileRef = json['directus_files_id'];
+    final fileId = rawFileRef is Map<String, dynamic>
+        ? (rawFileRef['id'] ?? rawFileRef['file'])?.toString() ?? ''
+        : rawFileRef?.toString() ?? '';
+
     return ArticleFileLink(
       id: json['id'] is int
           ? json['id'] as int
-          : int.parse(json['id'].toString()),
+          : int.tryParse(json['id'].toString()) ?? 0,
       articleId: json['articles_id'] as String,
-      fileId: json['directus_files_id'] as String,
+      fileId: fileId,
     );
   }
 
