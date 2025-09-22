@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/about_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/app_info_service.dart';
 import 'about_screen.dart';
 import 'login_screen.dart';
 
@@ -102,7 +104,10 @@ class HomeScreen extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const AboutScreen(),
+                              builder: (_) => ChangeNotifierProvider(
+                                create: (_) => AboutProvider(AppInfoService())..loadAppInfo(),
+                                child: const AboutScreen(),
+                              ),
                             ),
                           );
                         },
