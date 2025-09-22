@@ -1,6 +1,9 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/article.dart';
 
 class DirectusService {
   static const String _baseUrl = 'https://api-cnds-7d4e5a.online404.com';
@@ -34,9 +37,7 @@ class DirectusService {
   }
 
   Map<String, String> get _headers {
-    Map<String, String> headers = {
-      'Content-Type': 'application/json',
-    };
+    Map<String, String> headers = {'Content-Type': 'application/json'};
     if (_accessToken != null) {
       headers['Authorization'] = 'Bearer $_accessToken';
     }
@@ -47,14 +48,12 @@ class DirectusService {
     final response = await http.post(
       Uri.parse('$_baseUrl/users/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
+      body: jsonEncode({'email': email, 'password': password}),
     );
 
-
-    if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+    if (response.statusCode == 200 ||
+        response.statusCode == 201 ||
+        response.statusCode == 204) {
       if (response.body.isNotEmpty) {
         return jsonDecode(response.body);
       } else {
@@ -70,16 +69,15 @@ class DirectusService {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
-
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await _saveTokens(data['data']['access_token'], data['data']['refresh_token']);
+        await _saveTokens(
+          data['data']['access_token'],
+          data['data']['refresh_token'],
+        );
         return data;
       } else {
         throw Exception('Erreur lors de la connexion: ${response.body}');
@@ -115,11 +113,16 @@ class DirectusService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      await _saveTokens(data['data']['access_token'], data['data']['refresh_token']);
+      await _saveTokens(
+        data['data']['access_token'],
+        data['data']['refresh_token'],
+      );
       return data;
     } else {
       await _clearTokens();
-      throw Exception('Erreur lors du rafraîchissement du token: ${response.body}');
+      throw Exception(
+        'Erreur lors du rafraîchissement du token: ${response.body}',
+      );
     }
   }
 
@@ -131,7 +134,6 @@ class DirectusService {
         headers: _headers,
       );
 
-
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else if (response.statusCode == 401 && !retry) {
@@ -141,7 +143,9 @@ class DirectusService {
         if (response.statusCode == 401) {
           await _clearTokens();
         }
-        throw Exception('Erreur lors de la récupération de l\'utilisateur: ${response.body}');
+        throw Exception(
+          'Erreur lors de la récupération de l\'utilisateur: ${response.body}',
+        );
       }
     } catch (e) {
       rethrow;
@@ -155,10 +159,11 @@ class DirectusService {
 
       // Essayons différentes approches
       final response = await http.get(
-        Uri.parse('$_baseUrl/items/profiles?filter={"user_id":{"_eq":"$userId"}}'),
+        Uri.parse(
+          '$_baseUrl/items/profiles?filter={"user_id":{"_eq":"$userId"}}',
+        ),
         headers: _headers,
       );
-
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -174,7 +179,10 @@ class DirectusService {
     }
   }
 
-  Future<Map<String, dynamic>> createOrUpdateProfile(String nickname, {bool retry = false}) async {
+  Future<Map<String, dynamic>> createOrUpdateProfile(
+    String nickname, {
+    bool retry = false,
+  }) async {
     try {
       final user = await getCurrentUser();
       final userId = user['data']['id'];
@@ -213,7 +221,9 @@ class DirectusService {
         } else if (response.statusCode == 204) {
           // Création réussie, pas de contenu retourné
           // Récupérons le profil créé
-          await Future.delayed(const Duration(milliseconds: 100)); // Petit délai
+          await Future.delayed(
+            const Duration(milliseconds: 100),
+          ); // Petit délai
           return await getUserProfile();
         } else if (response.statusCode == 401 && !retry) {
           await refreshTokens();
@@ -228,8 +238,11 @@ class DirectusService {
             if (errors != null && errors.isNotEmpty) {
               final error = errors.first;
               final code = error['extensions']?['code'];
-              if (code == 'RECORD_NOT_UNIQUE' && error['extensions']?['field'] == 'nickname') {
-                throw Exception('Ce nickname est déjà utilisé. Choisis-en un autre !');
+              if (code == 'RECORD_NOT_UNIQUE' &&
+                  error['extensions']?['field'] == 'nickname') {
+                throw Exception(
+                  'Ce nickname est déjà utilisé. Choisis-en un autre !',
+                );
               }
             }
           } catch (e) {
@@ -263,7 +276,9 @@ class DirectusService {
       await refreshTokens();
       await deleteAccount(retry: true);
     } else {
-      throw Exception('Erreur lors de la suppression du compte: ${response.body}');
+      throw Exception(
+        'Erreur lors de la suppression du compte: ${response.body}',
+      );
     }
   }
 
@@ -280,11 +295,16 @@ class DirectusService {
       await refreshTokens();
       return getProducts(retry: true);
     } else {
-      throw Exception('Erreur lors de la récupération des produits: ${response.body}');
+      throw Exception(
+        'Erreur lors de la récupération des produits: ${response.body}',
+      );
     }
   }
 
-  Future<Map<String, dynamic>> makeReservation(String productId, {bool retry = false}) async {
+  Future<Map<String, dynamic>> makeReservation(
+    String productId, {
+    bool retry = false,
+  }) async {
     final user = await getCurrentUser();
     final userId = user['data']['id'];
 
@@ -311,5 +331,28 @@ class DirectusService {
   Future<bool> isLoggedIn() async {
     await _loadTokens();
     return _accessToken != null && _refreshToken != null;
+  }
+
+  Future<List<Article>> getArticles({bool retry = false}) async {
+    await _loadTokens();
+    final response = await http.get(
+      Uri.parse('$_baseUrl/items/articles?fields=*,articles_files.*'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final payload = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = payload['data'] as List<dynamic>? ?? [];
+      return data
+          .map((e) => Article.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (response.statusCode == 401 && !retry) {
+      await refreshTokens();
+      return getArticles(retry: true);
+    } else {
+      throw Exception(
+        'Erreur lors de la récupération des articles: ${response.body}',
+      );
+    }
   }
 }
