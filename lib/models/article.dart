@@ -52,10 +52,10 @@ class Article {
           : null,
       number: json['number']?.toString() ?? '',
       title: json['title'] as String,
-      sellingPrice: _toDouble(json['selling_price']) ?? 0,
+      sellingPrice: _toCurrency(json['selling_price']) ?? 0,
       multipleItems: _toBool(json['multiple_items']),
       stock: _parseInt(json['stock']),
-      newSellingPrice: _toDouble(json['new_selling_price']),
+      newSellingPrice: _toCurrency(json['new_selling_price']),
       description: json['description'] as String?,
       photos: _parsePhotoIds(json['photos']),
       files:
@@ -75,10 +75,12 @@ class Article {
       'date_updated': dateUpdated?.toIso8601String(),
       'number': number,
       'title': title,
-      'selling_price': sellingPrice,
+      'selling_price': _fromCurrency(sellingPrice),
       'multiple_items': multipleItems,
       'stock': stock,
-      'new_selling_price': newSellingPrice,
+      'new_selling_price': newSellingPrice != null
+          ? _fromCurrency(newSellingPrice!)
+          : null,
       'description': description,
       'photos': photos,
       'articles_files': files.map((e) => e.toJson()).toList(),
@@ -117,12 +119,6 @@ class Article {
       photos: photos ?? this.photos,
       files: files ?? this.files,
     );
-  }
-
-  static double? _toDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is num) return value.toDouble();
-    return double.tryParse(value.toString());
   }
 
   static int? _parseInt(dynamic value) {
@@ -168,6 +164,22 @@ class Article {
     }
 
     return results;
+  }
+
+  static double? _toCurrency(dynamic value) {
+    final cents = _toNum(value);
+    if (cents == null) return null;
+    return cents / 100;
+  }
+
+  static double? _toNum(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  static int _fromCurrency(double euros) {
+    return (euros * 100).round();
   }
 }
 

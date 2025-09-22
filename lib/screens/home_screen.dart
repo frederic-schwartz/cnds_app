@@ -8,7 +8,9 @@ import '../providers/auth_provider.dart';
 import '../services/app_info_service.dart';
 import '../services/directus_service.dart';
 import 'about_screen.dart';
+import 'help_screen.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,7 +106,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: const Text('Mon profil'),
                         onTap: () {
                           Navigator.pop(context);
-                          // TODO: Navigation vers profil
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ProfileScreen(),
+                            ),
+                          );
                         },
                       ),
                       ListTile(
@@ -112,7 +118,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: const Text('Aide'),
                         onTap: () {
                           Navigator.pop(context);
-                          // TODO: Navigation vers aide
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const HelpScreen(),
+                            ),
+                          );
                         },
                       ),
                       ListTile(
@@ -438,9 +448,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatPrice(double price) {
-    if (price % 1 == 0) {
-      return '${price.toStringAsFixed(0)} €';
-    }
     return '${price.toStringAsFixed(2)} €';
   }
 
